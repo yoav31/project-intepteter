@@ -1,14 +1,8 @@
-
 import math
 import ast
-
 class Interpreter:
-
-    #פונקציית בנאי של האינטרפטר
     def __init__(self):
-        #מילון ריק שמכיל את כל המשתנים הנוצרים במהלך ריצת האינטרפטר
         self.variables = {}
-        #מילון שבו כל סוג של פעולה מתאימה לפונקציית למבדה שמבצעת אותה
         self.dispatch = {
         # Basic arithmetic ops
         ast.Add: lambda x, y: x + y,
@@ -31,7 +25,7 @@ class Interpreter:
         ast.FloorDiv: lambda x, y: x // y,
     }
 
-#הפונקציה טוקנייז: מפרקת את הקוד לעץ תחבירי ומייצרת רשימת טוקנים לכל המרכיבים של הקוד (כמו קבועים, אופרטורים השוואות השמות וכו)
+
     def tokenize_code(self, code):
         tree = ast.parse(code)
         tokens = []
@@ -51,7 +45,7 @@ class Interpreter:
             elif isinstance(node, ast.UnaryOp):
                 tokens.append(('UNARY_OP', type(node.op).__name__))
             elif isinstance(node, ast.Assign):
-                tokens.append(('ASSIGN', '='))
+                tokens.append(('ASSIGN', '=')) 
             elif isinstance(node, ast.If):
                 tokens.append(('IF', 'if'))
             elif isinstance(node, ast.For):
@@ -86,11 +80,6 @@ class Interpreter:
         visit_node(tree)
         return tokens
 
-# זוהי הפונקציה העיקרית במפרש היא מעריכה את ערכי הצמתים השונים של העץ התחבירי ומבצעת את החישובים הנדרשים  
-#למשל: 
-#קבועים: אם הצומת הוא קבוע (כמו מספר), הפונקציה מחזירה את הערך שלו
-#שמות משתנים: אם הצומת הוא משתנה הפונקציה תחזיר את הערך שלו מהמילון
-#אופרטורים בינאריים: אם הצומת הוא אופרטור בינארי (כמו +,-) הפונקציה מעריכה את שני האופרנדים ומבצעת את הפעולה המתאימה באמצעות טבלת ה-דיספאטץ
     def eval(self, node):
         # Constants
         if isinstance(node, ast.Constant):
@@ -101,32 +90,24 @@ class Interpreter:
             return self.variables.get(node.id)
         
         # Binary Operations
-        elif isinstance(node, ast.BinOp):
+        elif isinstance(node, ast.BinOp):  # for two objects operation (2+3)
             left = self.eval(node.left)
             right = self.eval(node.right)
-            if left is None or right is None:
+            if left is None or right is None: 
                 return None
             return self.dispatch[type(node.op)](left, right)
         
         # Comparison
-        #הערכה של השוואות: מטפלת באופרטורים של השוואה כמו >, < וכו. היא משווה בין הערך משמאל למשתנים משמאל.
         elif isinstance(node, ast.Compare):
-            #שורה זו מחשבת את הערך של האיבר השמאלי בהשוואה
-            #למשל עבור א<ב אז האיבר השמאלי יהיה ב
             left = self.eval(node.left)
-
-            #לולאה שעוברת על כל האופרטורים והאיברים המושווים: מכיוון שיכולות להיות מספר השוואות יחד שורה זו מבצעת לולאה על כל האופרטורים (כמו גדול, קטן שווה וכו) והאיברים המושווים על ידי שימוש בפונקציה זיפ שמשלבת את שתי הרשימות האלו יחד ללולאה אחת.
-            for op, right in zip(node.ops, node.comparators):
-                #שורה זו מחשבת את הערך של האיבר הימני בהשוואה הנוכחית
+            for op, right in zip(node.ops, node.comparators): # compares between every operands and their comparators
                 right_val = self.eval(right)
-                #כאן הקוד מבצע את ההשוואה בפועל. 
                 if not self.dispatch[type(op)](left, right_val):
-                    return False
+                    return False  
                 left = right_val
             return True
         
         # Logical Operations
-        #פעולות לוגיות: מטפלת בפעולות לוגיות כמו "וגם" ו-"או". בפעולת וגם כל הערכים צריכים להיות אמת וב-או לפחות אחד צריך להיות אמת 
         elif isinstance(node, ast.BoolOp):
             values = [self.eval(value) for value in node.values]
             if isinstance(node.op, ast.And):
@@ -135,7 +116,6 @@ class Interpreter:
                 return any(values)
         
         # Assignment
-        #השמה (=): הפעולה מעריכה את הערך בצד ימין ומשבצת אותו במשתנים בצד שמאל 
         elif isinstance(node, ast.Assign):
             value = self.eval(node.value)
             for target in node.targets:
@@ -143,7 +123,6 @@ class Interpreter:
             return value
         
         # If-statements
-        #פקודות "אם": מעריכה את התנאי בפקודת ה-"אם" אם התנאי מתקיים מבצעים את גוף הקוד שבתוך התנאי אחרת מדלגים על גוף הקוד ועוברים לקטע הקוד שאחריו
         elif isinstance(node, ast.If):
             if self.eval(node.test):
                 return self.eval_body(node.body)
@@ -151,15 +130,18 @@ class Interpreter:
                 return self.eval_body(node.orelse)
         
         # Expressions
-        #ביטויים: מעריכה ביטויים בודדים כמו קריאות לפונקציות או פעולות אריתמטיות.
         elif isinstance(node, ast.Expr):
             return self.eval(node.value)
         
         # Callables
-        elif isinstance(node, ast.Call):
+        elif isinstance(node, ast.Call):    # calls for a func, and args are the args of the func
             func = self.eval(node.func)
             args = [self.eval(arg) for arg in node.args]
-            return func(*args)
+            if callable(func):
+                return func(*args)
+            else:
+                raise TypeError(f"{func} is not callable")
+
         
         # Lists
         elif isinstance(node, ast.List):
@@ -174,93 +156,68 @@ class Interpreter:
             return {self.eval(key): self.eval(value) for key, value in zip(node.keys, node.values)}
         
         # Subscript
-        #בדיקה האם הצומת הוא תת מפתח, כלומר גישה לאיבר ברשימה,מילון או מערך כלשהו באמצעות אינדקס
-        elif isinstance(node, ast.Subscript):
-            #שורה זו מעריכה את הערך של הצומת בעץ שנמצא לפני הסוגריים המרובעים כלומר הערך של מערך מספרים מסויים יהיה כל המערך
-            value = self.eval(node.value) 
-            #אם הערך הוא ריק אז מחזירים ריק
+        elif isinstance(node, ast.Subscript): 
+            value = self.eval(node.value)   # Evaluates the object being subscripted (the list or dictionary)
             if value is None:
                 return None
-            #אם הצומת מייצגת גישה לפי אינדקס יחיד אז השורה שבתנאי מעריכה את האינדקס 
-            if isinstance(node.slice, ast.Index):   
-                index = self.eval(node.slice.value)
-            #אם במקום אינדקס יחיד יש חיתןך של מספר איברים למשל אינדקס 1 עד 4 במערך השורה אינדקס שבתנאי נכנסת להערכת החיתוך    
-            elif isinstance(node.slice, ast.Slice):
-                lower = self.eval(node.slice.lower) if node.slice.lower else None
-                upper = self.eval(node.slice.upper) if node.slice.upper else None
-                step = self.eval(node.slice.step) if node.slice.step else None
+            if isinstance(node.slice, ast.Index):       # Check if the subscript is an index 
+                index = self.eval(node.slice.value)     # Evaluates the index
+            elif isinstance(node.slice, ast.Slice):     # If the subscript is a slice 
+                lower = self.eval(node.slice.lower) if node.slice.lower else None   # Evaluate the lower bound of the slice
+                upper = self.eval(node.slice.upper) if node.slice.upper else None   # Evaluate the upper bound of the slice 
+                step = self.eval(node.slice.step) if node.slice.step else None      # Evaluate the step of the slice 
+                # Create a Python slice object using the evaluated bounds and step
                 index = slice(lower, upper, step)
-
-                #מקרה אחר: אם זה לא אינדקס ולא חיתוך (מקרה נדיר) הקוד מעריך את הפרוסה באופציה אחרת
+            # If the subscript is neither an index nor a slice, evaluate it directly
             else:
                 index = self.eval(node.slice)
-
-                #בשורה זו מנסים לגשת לאיבר ברצף מסוג מסוים לפי האינדקס או החיתוך שלו.
-                #אם יש שגיאות כמו אינדקס מחוץ לטווח וכו הקוד יחזיר כלום במקום לזרוק שגיאה.
+            # Try to access the value using the computed index/slice
             try:
                 return value[index]
             except (IndexError, KeyError, TypeError):
                 return None
-        
 
-        # Slice
-        #בדיקה אם הצומת הוא חיתוך: הם הצומת מייצגת פעולה של חיתוך (כלומר גישה לטווח של ערכים)
+        # Slice 
         elif isinstance(node, ast.Slice):
-            #הערכת הגבולות של החיתוך: שורות אלו מעריכות את הגבולות התחתונים והעליונים של החיתוך ואת צעד הקפיצה שלו.
-            #אם גבול כלשהו אינו קיים, הערך שלו יהיה ריק
             lower = self.eval(node.lower) if node.lower else None
             upper = self.eval(node.upper) if node.upper else None
             step = self.eval(node.step) if node.step else None
             return slice(lower, upper, step)
         
         # Unary Ops
-        #שורה זו בודקת אם הצומת היא פעולה אונארית, כלומר פעולה שפועלת על ערך יחיד (כמו סימן שלילי או שלילה לוגית)
         elif isinstance(node, ast.UnaryOp):
             op = node.op
-            #סימן שלילי: בדיקה האם האופרטור הוא סימן שלילי
-            #אם כן השורה שבתנאי תגרום לפונקציה להחזיר את הערך הנגדי של האופרנד
             if isinstance(op, ast.USub):
-                return -self.eval(node.operand)
-            #סימן חיובי: בדיקה  האם האופרטור הוא סימן חיובי
-            #אם כן השורה שבתנאי תגרום לפונקציה להחזיר את הערך של האופרנד כמו שהוא
+                return -self.eval(node.operand)   # Evaluate the operand and return its negation  (return -x)
             elif isinstance(op, ast.UAdd):
-                return +self.eval(node.operand)
-            #שלילה לוגית: אם האופרטור הוא שלילה לוגית השורה שבתנאי תגרום לפונקציה להחזיר את הערך ההפוך מבחינה לוגית של האופרנד (אמת יהפוך לשקר וההפך)
+                return +self.eval(node.operand) 
             elif isinstance(op, ast.Not):
-                return not self.eval(node.operand)
-        
+                return not self.eval(node.operand)   # Evaluate the operand and return its logical negation (e.g., if x=True, return False)
+            
         # For loops
         elif isinstance(node, ast.For):
             iterable = self.eval(node.iter)
             if iterable is not None:
-                for item in iterable:
-                    #כאן משויכת הערך הנוכחי של האיטרציה למשתנה הלולאה (כלומר, מבוצעת הצבה של ערך הנוכחי במשתנה).
-                    self.variables[node.target.id] = item
-                    #כאן מתבצע הקוד שנמצא בתוך גוף הלולאה
+                for item in iterable:  
+                    self.variables[node.target.id] = item   # Assign the current item to the loop variable
                     result = self.eval_body(node.body)
-                    #אם גוף הלולאה מכיל את הפקודה "עצור" נבצע את הפקודה ונצא מהלולאה באמצע ריצתה
                     if isinstance(result, ast.Break):
                         break  
-                    #אם גוף הלולאה מכיל את הפקודה "המשך" נבצע את הפקודה ונסיים את האיטרציה הנוכחית
                     elif isinstance(result, ast.Continue):
                         continue
             return None
 
         # Attribute access
-        elif isinstance(node, ast.Attribute):
-            #תחילה בודקים את הערך של האובייקט שאליו מתייחסים
+        elif isinstance(node, ast.Attribute): # getting the obj attributes 
             value = self.eval(node.value)
             if value is None:
                 return None
-            #בשורה זו משתמשים בפונקציה "גטאטרר" של פייתון כדי לקבל את הערך של הארטריביוט של האובייקט. אם האטריביוט לא קיים מחזירים ריק
             return getattr(value, node.attr, None)
-        
+       
         # While loops
-        elif isinstance(node, ast.While):
-            #בשורה זו מבוצעת הערכה של תנאי הלולאה. אם הערך הוא אמת נכנסים לגוף הלולאה
-            while self.eval(node.test):
-                result = self.eval_body(node.body)
-                #בדיקת פקודות "המשך" ו-"שבור" אם הערך של ריזולט מחזיר את הפקודה "שבור" נשבור את הלולאה, אם הוא מחזיר "המשך" נמשיך ישירות לאיטרציה הבאה
+        elif isinstance(node, ast.While): 
+            while self.eval(node.test): 
+                result = self.eval_body(node.body) 
                 if isinstance(result, ast.Break):
                     break
                 elif isinstance(result, ast.Continue):
@@ -275,123 +232,68 @@ class Interpreter:
         elif isinstance(node, ast.Continue):
             return ast.Continue()
         
-        #calling to a function
-        elif isinstance(node, ast.Call):
-            #הערכה של הפונקציה (מהי הפונקציה שיש לקרוא לה)
-            func = self.eval(node.func)
-            #הערכה לכל אחד מהארגומנטים שנמסרו לפונקציה
-            args = [self.eval(arg) for arg in node.args]
-            #בדיקה האם הפונקציה ניתנת לקריאה
-            #אם כן קוראים ומבצעים את הפונקציה יחד עם הארגומנטים שניתנו לה
-            if callable(func):
-                return func(*args)
-            #אם לא תיזרק שגיאה
-            else:
-                raise TypeError(f"{func} is not callable")
-
         return None
 
-
-#הפונקציה אחראית על הערכת ה-"גוף" של הקוד. כלומר מה הקוד עושה לדוגמא קריאה לפונקציה.
-#הפונקציה מקבלת כפרמטר את המשתנה בודי שהוא רשימה של פקודות
     def eval_body(self, body):
-        result = None    #מאתחל את התוצאה לכלום
-        #עבור כל פקודה בבודי אנחנו קוראים לפונקציה איבל כדי להעריך את הפקודה
+        result = None
         for node in body:
-            #הפונקציה מחזיקה את התוצאה האחרונה של הפקודה במשתנה תוצאה אשר היא מחזירה אותו בסוף
             result = self.eval(node)
         return result
 
-#פונקציה זו קוראת קוד, מפרקת אותו לעץ התחבירי ומבצעת את הערכתו
     def parse_and_eval(self, code):
         # Parse the code into an AST
-        tree = ast.parse(code)
-        
+        tree = ast.parse(code) 
         # Evaluate the code
         return self.eval_body(tree.body)
 
-
-#הפונקציה אחראית על ביצוע השמה של ערכים למשתנים או לרשימות בעזרת אינדקסים או טווחים. 
     def assign(self, target, value):
-        #אם המטרה הוא מסוג משתנה רגיל פשוט מקצים את הערך למשתנה במילון המשתנים
         if isinstance(target, ast.Name):
             # Direct assignment to a variable
-            #target.id - the name of the variable
-            #value- the value of the variable after the assignment
             self.variables[target.id] = value
-          #אם המטרה הוא אינדקס במבנה נתונים מסוים כמו מערך, הפונקציה מבצעת השמה לאיבר מסוים במבנה הנתונים  
         elif isinstance(target, ast.Subscript):
             # Assignment to an element of a list or dictionary
-            #obj= the value of the data structure where we want to do the assign
             obj = self.eval(target.value)
             if obj is not None:
-                #בדיקה אם ההשמה מתבצעת לאינדקס בודד במבנה הנתונים
                 if isinstance(target.slice, ast.Index):
-                    #אם כן: מוצאים את האינדקס ושומרים אותו במשתנה
                     index = self.eval(target.slice.value)
-
-                    #בדיקה האם ההשמה מתבצעת על טווח של אינדקסים ובקפיצה מסוימת בניהם
                 elif isinstance(target.slice, ast.Slice):
-                    #אם כן: 
-                    #lower- the low index of the range (the start)
-                    #upper- the highest index of the range (the end)
-                    #step- the jump between the indexes
                     lower = self.eval(target.slice.lower) if target.slice.lower else None
                     upper = self.eval(target.slice.upper) if target.slice.upper else None
                     step = self.eval(target.slice.step) if target.slice.step else None
                     index = slice(lower, upper, step)
                 else:
                     index = self.eval(target.slice)
-                    #ניסיון ביצוע ההשמה
                 try:
                     obj[index] = value
-                    #טיפול בשגיאות: כאשר אחת משלושת השגיאות קוראת הפונקציה תפסיק את הנסיון ותמשיך ללא ביצוע ההשמה
                 except (IndexError, KeyError, TypeError):
                     pass  
 
-#הפונקציה יוצרת לולאה פשוטה שקוראת קלט מהמשתמש, מעריכה אותו ומדפיסה את התוצאה. הלולאה תמשיך לרוץ עד שהמשתמש יצא.
     def repl(self):
         print("Enter your code. Use a blank line to finish input and execute.")
         print("Type 'exit' on a blank line to quit.")
-        #start of the main infinite loop of the repl
-        # the loop ends when the user enters 'exit' 
         while True:
-            #initialize a list of the code lines from the user
             code_lines = []
-            #לולאה פנימית עבור הקטע קוד הנוכחי, נועדה עבור קטע קוד של מספר שורות כמו תנאי ולולאות
             while True:
-                #נוצרת למשתמש שורה חדשה לכתיבת קוד
-                #אם אנחנו בתוך קטע קוד מסויים תחילת השורה תתחיל : ... אם אנחנו בתחילתו של קטע קוד חדש השורה תתחיל עם >>ע
                 line = input('... ' if code_lines else '>>> ')
-
-                #אם המשתמש הכניס שורת קוד ריקה
                 if not line:
-                    #אם כבר יש שורות בקטע קוד הנל הלולאה הפנימית תסתיים והתוכנית תבצע את הקוד
                     if code_lines:
                         break
-                    #אם המשתמש הכניס אקזית הפונקציה תסתיים כך שהמשתמש לא יוכל יותר להכניס שורות קוד
                     elif line.lower() == 'exit':
                         return
                 code_lines.append(line)
-            # מאחדים את כל השורות שנכתבו בקטע קוד בלולאה הפנימית לשורה אחת גדולה עם הפרדה לפי שורות, בעצם מכינים את הקטע קוד להרצה
+            
             code = '\n'.join(code_lines)
-            #אם המשתמש הכניס אקזיט בתוך הקוד הלולאה הראשית תיפסק וככה המשתמש לא יוכל להכניס יותר שורות קוד
             if code.lower() == 'exit':
                 break
             
-            #מנסים להריץ את הקוד שהמשתמש הכניס
             try:
-                #קריאה לפונקציה שמפרשת את הקוד ומעריכה אותו
                 result = self.parse_and_eval(code)
-                #אם התוצאה היא לא כלום הפלט יודפס למסך
                 if result is not None:
                     print(result)
-#אם מתרחשת שגיאה כלשהיא במהלך הרצת הקוד השגיאה תיתפס ותודפס כהודעת שגיאה
             except Exception as e:
                 print(f"Error: {e}")
 
 # Custom arithmetic functions
-
 def add(*args):
     if len(args) == 0:
         return 0
@@ -429,16 +331,21 @@ def divide(x, y):
         return x / y
 
 def remove(self, target):
-    if isinstance(target, ast.Subscript):
-        obj = self.eval(target.value)
-        if isinstance(obj, list):
+    if isinstance(target, ast.Subscript):    # Check if the target an element from a list or dictionary
+        obj = self.eval(target.value)   # Evaluate and store the object being subscripted
+        if isinstance(obj, list):   # If it's a list obj
+            # Evaluate the slice (the index)
             index = self.eval(target.slice.value) if isinstance(target.slice, ast.Index) else None
+            # Check if the evaluated index is valid 
             if index is not None and 0 <= index < len(obj):
+                # Remove the element at the specified index
                 obj.pop(index)
+        # If the object is a dictionary
         elif isinstance(obj, dict):
+            # Evaluate the slice (the key) 
             key = self.eval(target.slice.value) if isinstance(target.slice, ast.Index) else None
-            if key is not None and key in obj:
-                del obj[key]
+            if key is not None and key in obj: # Check if the evaluated key is valid 
+                del obj[key] # Remove the key and its value
 
 def square(x):
     if x > 0:
@@ -462,7 +369,6 @@ def is_lower(s):
         return s.islower()
     raise TypeError("isLower function requires a string input")
 
-# Add built-in functions and modules
 interpreter = Interpreter()
 interpreter.variables.update({
     'print': print,
@@ -570,3 +476,4 @@ print("Is 'WORLD' lowercase?", isLower("WORLD"))
 if __name__ == "__main__":
     print("Entering REPL mode:")
     interpreter.repl()
+
