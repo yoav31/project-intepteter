@@ -1,7 +1,3 @@
-#Name: Idan Alashvili , ID:326117629
-#Name: Maor Pinhas , ID:324170885
-#Name: Yoav Vaknin , ID:208323261
-#Name: Matan Mezamer Tov, ID:208414516
 
 import math
 import ast
